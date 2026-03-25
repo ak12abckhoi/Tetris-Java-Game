@@ -109,7 +109,7 @@ public class Board {
     // Kiểm tra tổng quát cho cả 3 khối trong khay
     public boolean isGameOver(Block[] currentBlocks, boolean[] isBlockUsed) {
         for (int i = 0; i < currentBlocks.length; i++) {
-            if (!isBlockUsed[i]) { // Nếu khối này chưa được xài
+            if (!isBlockUsed[i]) { // Nếu khối này chưa được dùng
                 if (canPlaceAnyPosition(currentBlocks[i])) {
                     return false; // Vẫn còn đường sống
                 }
