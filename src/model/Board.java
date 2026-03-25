@@ -94,7 +94,7 @@ public class Board {
         return clearedCells;
     }
 
-    // Thuật toán kiểm tra Game Over: Khối gạch hiện tại có thể đặt ở đâu không?
+    // Thuật toán kiểm tra Game Over: Khối gạch hiện tại có thể đặt ở đâu?
     public boolean canPlaceAnyPosition(Block block) {
         for (int y = 0; y < SIZE; y++) {
             for (int x = 0; x < SIZE; x++) {
