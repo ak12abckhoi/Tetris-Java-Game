@@ -1,6 +1,7 @@
 package model;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Block {
     private int[][] shape;
@@ -11,7 +12,12 @@ public class Block {
     }
 
     public int[][] getShape() {
-        return shape;
+        // Trả về bản sao để bảo vệ dữ liệu nội bộ
+        int[][] copy = new int[shape.length][];
+        for (int i = 0; i < shape.length; i++) {
+            copy[i] = shape[i].clone();
+        }
+        return copy;
     }
 
     // Định nghĩa các loại hình dáng khối gạch (1 là có gạch, 0 là trống)
@@ -40,16 +46,17 @@ public class Block {
 
     // Hàm sinh 3 khối ngẫu nhiên không trùng lặp cho khay chờ
     public static Block[] generateUniqueBlocks() {
-        List<Integer> shapeTypes = new ArrayList<>();
-        for (int i = 1; i <= 17; i++) {
-            shapeTypes.add(i);
+        // Chọn 3 số ngẫu nhiên không trùng trong [1..17] — hiệu quả hơn shuffle
+        Set<Integer> chosen = new HashSet<>();
+        ThreadLocalRandom rng = ThreadLocalRandom.current();
+        while (chosen.size() < 3) {
+            chosen.add(rng.nextInt(1, 18)); // [1, 17]
         }
-        
-        Collections.shuffle(shapeTypes); 
-        
+
         Block[] blocks = new Block[3];
-        for (int i = 0; i < 3; i++) {
-            blocks[i] = new Block(shapeTypes.get(i));
+        int idx = 0;
+        for (int type : chosen) {
+            blocks[idx++] = new Block(type);
         }
         return blocks;
     }
