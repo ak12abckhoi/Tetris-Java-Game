@@ -12,7 +12,26 @@ public class GamePanel extends JPanel {
     private MainContainer parent;
     private ControllerGame controller;
     private int CELL_SIZE = 24;
-    private int BOARD_Y = 100; // Compact header above
+    private int BOARD_Y = 100;
+    
+    private void computeLayout() {
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        // Target Board Width: 85% of window width, but not exceeding 60% of window height
+        int targetBoardW = (int)(w * 0.85);
+        int targetBoardH_limit = (int)(h * 0.55);
+        int targetSize = Math.min(targetBoardW, targetBoardH_limit);
+        
+        // Scale CELL_SIZE
+        CELL_SIZE = Math.max(15, Math.min(45, targetSize / Board.SIZE));
+        
+        // Vertical positioning — more space from header
+        BOARD_Y = Math.max(110, (int)(h * 0.16)); 
+        
+        updateTrayPositions();
+    }
     
     private Color[] slotColors = {NeonTheme.CYAN, NeonTheme.YELLOW, NeonTheme.PINK};
     
@@ -48,12 +67,13 @@ public class GamePanel extends JPanel {
     }
 
     private void updateTrayPositions() {
+        int h = getHeight();
         int boardBottom = BOARD_Y + Board.SIZE * CELL_SIZE;
-        int trayTop = boardBottom + 20;
+        int trayTop = boardBottom + (int)((h - boardBottom) * 0.15); 
         int w = getWidth();
         int spacing = w / 3;
         for (int i = 0; i < 3; i++) {
-            trayX[i] = spacing * i + spacing / 2 - CELL_SIZE; // center each slot
+            trayX[i] = spacing * i + spacing / 2 - CELL_SIZE; 
             trayY[i] = trayTop;
         }
     }
@@ -62,6 +82,7 @@ public class GamePanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                computeLayout();
                 if (controller.getGameState().isGameOver()) return;
                 
                 // Check if clicked in any tray slot
@@ -183,11 +204,11 @@ public class GamePanel extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
+        computeLayout();
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        updateTrayPositions();
         drawBoard(g2d);
         drawTrayPieces(g2d);
         
