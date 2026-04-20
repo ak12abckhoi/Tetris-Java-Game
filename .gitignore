@@ -1,0 +1,8 @@
+bin/
+out/
+*.txt
+*.properties
+.vscode/
+stderr.txt
+stdout.txt
+sources.txt

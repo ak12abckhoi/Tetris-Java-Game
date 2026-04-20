@@ -6,10 +6,17 @@ import model.GameState;
 import model.ScoreManager;
 import model.SoundManager;
 
+import java.awt.Point;
+import java.util.List;
+import java.util.function.Consumer;
+
 /**
- * ControllerGame — phần của Hà.
- * Quản lý toàn bộ luồng game, điểm số, âm thanh.
- * Chưa ghép View — thành viên phụ trách View sẽ bổ sung sau.
+ * ControllerGame — Điều phối toàn bộ luồng chơi đơn (Single Player).
+ *
+ * Quản lý:
+ *   - Vòng đời game (bắt đầu, tạm dừng, tiếp tục, kết thúc)
+ *   - Khay 3 khối hiện tại và logic thay khối mới
+ *   - Điểm số và âm thanh
  */
 public class ControllerGame {
 
@@ -17,9 +24,11 @@ public class ControllerGame {
     private ScoreManager scoreManager;
     private GameState    gameState;
 
-    private Block[]   currentPieces;
-    private boolean[] isUsed;
+    private Block[]   currentPieces;   // Khay 3 khối hiện tại
+    private boolean[] isUsed;          // Đánh dấu khối đã được đặt trong lượt này
     private int       combo = 0;
+
+    private Consumer<List<Point>> onLinesCleared; // Callback để phát hiệu ứng nhấp nháy
 
     public ControllerGame() {
         this.board        = new Board();
@@ -27,8 +36,9 @@ public class ControllerGame {
         this.gameState    = new GameState();
     }
 
-    // ── 1. BẮT ĐẦU / CHƠI LẠI ───────────────────────────────
+    // ── Bắt đầu / Chơi lại ──────────────────────────────────────
 
+    /** Khởi động ván chơi mới: đặt lại bảng, điểm, khay và bắt nhạc nền. */
     public void startGame() {
         board         = new Board();
         currentPieces = Block.generateUniqueBlocks();
@@ -42,66 +52,63 @@ public class ControllerGame {
         System.out.println("[Game] Bắt đầu! Trạng thái: " + gameState.getCurrent());
     }
 
+    /** Dừng nhạc và khởi động lại ván mới. */
     public void restartGame() {
         SoundManager.stopBGM();
         startGame();
     }
 
-    // ── 2. ĐẶT KHỐI ──────────────────────────────────────────
+    // ── Đặt khối ────────────────────────────────────────────────
 
     /**
-     * Gọi khi người dùng thả khối vào vị trí (startX, startY) trên bảng.
-     * @param pieceIndex  khối thứ mấy trong khay (0, 1, 2)
-     * @param startX      cột bắt đầu
-     * @param startY      hàng bắt đầu
+     * Người chơi thả khối thứ {@code pieceIndex} vào ô (startX, startY) trên bảng.
+     * Kiểm tra tính hợp lệ, cập nhật điểm số và kích hoạt xoá hàng nếu có.
      */
     public void placePiece(int pieceIndex, int startX, int startY) {
         if (!gameState.isPlaying()) return;
         if (isUsed[pieceIndex])     return;
 
         Block piece = currentPieces[pieceIndex];
-
-        // Kiểm tra hợp lệ
         if (!board.canPlaceBlock(piece, startX, startY)) return;
 
-        // Đặt khối
-        board.placeBlock(piece, startX, startY);
+        // Đặt khối vào lưới với ID màu theo vị trí trong khay (1, 2, 3)
+        board.placeBlock(piece, startX, startY, pieceIndex + 1);
         isUsed[pieceIndex] = true;
 
-        // Điểm đặt khối: 10đ mỗi khối
-        scoreManager.addScore(10);
+        scoreManager.addScore(10); // +10đ mỗi khối đặt thành công
         SoundManager.playClick();
 
-        // Xóa hàng/cột đầy
-        int clearedCells = board.clearFullLines();
-        if (clearedCells > 0) {
+        // Xoá hàng / cột đầy và tính điểm combo
+        List<Point> clearedPts = board.clearFullLines();
+        if (!clearedPts.isEmpty()) {
+            if (onLinesCleared != null) onLinesCleared.accept(clearedPts);
             combo++;
-            int linesCleared = Math.max(1, clearedCells / Board.SIZE);
+            int linesCleared = Math.max(1, clearedPts.size() / Board.SIZE);
             scoreManager.addClearScore(linesCleared, combo);
 
             if (combo >= 2) SoundManager.playCombo();
             else            SoundManager.playScore();
 
             System.out.printf("[Score] Xóa %d ô | Combo x%d | Điểm: %d%n",
-                    clearedCells, combo, scoreManager.getScore());
+                    clearedPts.size(), combo, scoreManager.getScore());
         } else {
             combo = 0;
         }
 
-        // Sinh bộ khối mới nếu dùng hết 3
+        // Sinh bộ khối mới khi người chơi dùng hết cả 3
         if (isUsed[0] && isUsed[1] && isUsed[2]) {
             currentPieces = Block.generateUniqueBlocks();
             isUsed        = new boolean[]{false, false, false};
             System.out.println("[Game] Sinh bộ khối mới.");
         }
 
-        // Kiểm tra game over
+        // Kiểm tra Game Over
         if (board.isGameOver(currentPieces, isUsed)) {
             triggerGameOver();
         }
     }
 
-    // ── 3. PAUSE / RESUME ─────────────────────────────────────
+    // ── Tạm dừng / Tiếp tục ────────────────────────────────────
 
     public void pauseGame() {
         if (!gameState.isPlaying()) return;
@@ -117,7 +124,7 @@ public class ControllerGame {
         System.out.println("[Game] Tiếp tục chơi.");
     }
 
-    // ── 4. VỀ MENU ────────────────────────────────────────────
+    // ── Về Menu ─────────────────────────────────────────────────
 
     public void goToMenu() {
         SoundManager.stopBGM();
@@ -125,7 +132,7 @@ public class ControllerGame {
         System.out.println("[Game] Về menu chính.");
     }
 
-    // ── 5. GAME OVER ──────────────────────────────────────────
+    // ── Game Over ────────────────────────────────────────────────
 
     private void triggerGameOver() {
         gameState.endGame();
@@ -136,7 +143,7 @@ public class ControllerGame {
                 scoreManager.getScore(), scoreManager.getHighScore());
     }
 
-    // ── GETTERS (cho View dùng sau) ───────────────────────────
+    // ── Getter ────────────────────────────────────────────────────
 
     public Board        getBoard()        { return board; }
     public ScoreManager getScoreManager() { return scoreManager; }
@@ -145,4 +152,5 @@ public class ControllerGame {
     public boolean[]    getIsUsed()       { return isUsed; }
     public int          getCombo()        { return combo; }
 
+    public void setOnLinesCleared(Consumer<List<Point>> r) { this.onLinesCleared = r; }
 }
