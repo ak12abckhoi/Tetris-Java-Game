@@ -44,9 +44,11 @@ public class HomePanel extends JPanel {
         add(createMainMenuButton("ĐIỂM CAO NHẤT",   NeonTheme.PURPLE,          e -> parent.showScreen("HIGHSCORE")),gbc);
         gbc.gridy = 4;
         add(createMainMenuButton("CÀI ĐẶT",         new Color(160, 160, 160),  e -> parent.showScreen("SETTINGS")),gbc);
-
+        gbc.gridy = 5;
+        add(createMainMenuButton("THOÁT GAME",      NeonTheme.PINK,            e -> System.exit(0)),               gbc);
+        
         // Khoảng trống phía dưới
-        gbc.gridy  = 5;
+        gbc.gridy  = 6;
         gbc.weighty = 0.3;
         add(Box.createVerticalStrut(10), gbc);
     }
